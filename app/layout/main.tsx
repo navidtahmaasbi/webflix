@@ -13,7 +13,7 @@ import { Link } from "@remix-run/react";
 import gravatar from "gravatar";
 import type { Hit } from "instantsearch.js";
 import { useNavigate } from "react-router";
-import { useSearchParams } from "remix";
+import { useSearchParams } from "@remix-run/react";
 import { isAfter } from "date-fns";
 import * as timeago from "timeago.js";
 

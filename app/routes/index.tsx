@@ -26,11 +26,11 @@ import type { Hit } from "instantsearch.js";
 import type { ShowItem } from "~/types/ShowItem";
 import type { MovieItem } from "~/types/MovieItem";
 import type { LoaderFunction } from "@remix-run/server-runtime";
-import { getServerState } from "react-instantsearch-hooks-server";
+import { getSearchServerState } from "~/search-state.server";
 import { VirtualSearchBox } from "~/components/virtual-search-box";
 
 export const loader: LoaderFunction = async () => {
-  const serverState = await getServerState(<Hero />);
+  const serverState = await getSearchServerState(<Hero />);
 
   return { serverState };
 };

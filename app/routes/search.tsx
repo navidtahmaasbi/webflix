@@ -10,7 +10,7 @@ import { useInView } from "react-intersection-observer";
 import { useEffect } from "react";
 import { Link, useLoaderData } from "@remix-run/react";
 import { history } from "instantsearch.js/cjs/lib/routers/index.js";
-import { getServerState } from "react-instantsearch-hooks-server";
+import { getSearchServerState } from "~/search-state.server";
 import { HeartIcon, PlusIcon } from "@heroicons/react/outline";
 
 import { ImageWithLoader } from "~/components/image-with-loader";
@@ -38,7 +38,7 @@ import { VirtualSearchBox } from "~/components/virtual-search-box";
 
 export const loader: LoaderFunction = async ({ request }) => {
   const url = new URL(request.url);
-  const serverState = await getServerState(<Search url={url} />);
+  const serverState = await getSearchServerState(<Search url={url} />);
 
   return { serverState, url };
 };
