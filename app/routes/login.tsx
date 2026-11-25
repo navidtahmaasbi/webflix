@@ -1,3 +1,4 @@
+import { useI18n } from "~/i18n";
 import type {
   ActionFunction,
   LoaderFunction,
@@ -6,27 +7,22 @@ import type {
 import { json, redirect } from "@remix-run/node";
 import { Form, Link, useActionData, useSearchParams } from "@remix-run/react";
 import * as React from "react";
-
 import { createUserSession, getUserId } from "~/session.server";
 import { verifyLogin } from "~/models/user.server";
 import { safeRedirect, validateEmail } from "~/utils";
 import { Main } from "~/layout/main";
-
 import background from "~/images/background.jpg";
-
 export const loader: LoaderFunction = async ({ request }) => {
   const userId = await getUserId(request);
   if (userId) return redirect("/");
   return json({});
 };
-
 interface ActionData {
   errors?: {
     email?: string;
     password?: string;
   };
 }
-
 export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
   const email = formData.get("email");
@@ -36,22 +32,40 @@ export const action: ActionFunction = async ({ request }) => {
 
   if (!validateEmail(email)) {
     return json<ActionData>(
-      { errors: { email: "Email is invalid" } },
-      { status: 400 }
+      {
+        errors: {
+          email: "Email is invalid",
+        },
+      },
+      {
+        status: 400,
+      }
     );
   }
 
   if (typeof password !== "string") {
     return json<ActionData>(
-      { errors: { password: "Password is required" } },
-      { status: 400 }
+      {
+        errors: {
+          password: "Password is required",
+        },
+      },
+      {
+        status: 400,
+      }
     );
   }
 
   if (password.length < 8) {
     return json<ActionData>(
-      { errors: { password: "Password is too short" } },
-      { status: 400 }
+      {
+        errors: {
+          password: "Password is too short",
+        },
+      },
+      {
+        status: 400,
+      }
     );
   }
 
@@ -59,8 +73,14 @@ export const action: ActionFunction = async ({ request }) => {
 
   if (!user) {
     return json<ActionData>(
-      { errors: { email: "Invalid email or password" } },
-      { status: 400 }
+      {
+        errors: {
+          email: "Invalid email or password",
+        },
+      },
+      {
+        status: 400,
+      }
     );
   }
 
@@ -71,20 +91,18 @@ export const action: ActionFunction = async ({ request }) => {
     redirectTo,
   });
 };
-
 export const meta: MetaFunction = () => {
   return {
     title: "Login",
   };
 };
-
 export default function LoginPage() {
+  const { t, locale, number } = useI18n();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/";
   const actionData = useActionData() as ActionData;
   const emailRef = React.useRef<HTMLInputElement>(null);
   const passwordRef = React.useRef<HTMLInputElement>(null);
-
   React.useEffect(() => {
     if (actionData?.errors?.email) {
       emailRef.current?.focus();
@@ -92,16 +110,17 @@ export default function LoginPage() {
       passwordRef.current?.focus();
     }
   }, [actionData]);
-
   return (
     <Main>
       <div
         className="flex min-h-screen flex-col bg-cover bg-top"
-        style={{ backgroundImage: `url(${background})` }}
+        style={{
+          backgroundImage: `url(${background})`,
+        }}
       >
         <div className="mx-auto mt-48 w-full max-w-md bg-black/80 p-8">
           <h2 className="mb-8 text-2xl font-bold text-white">
-            Sign in to your account
+            {t("Sign in to your account")}
           </h2>
 
           <Form method="post" className="space-y-6">
@@ -110,7 +129,7 @@ export default function LoginPage() {
                 htmlFor="email"
                 className="block text-sm font-medium text-white"
               >
-                Email address
+                {t("Email address")}
               </label>
               <div className="mt-1">
                 <input
@@ -120,6 +139,7 @@ export default function LoginPage() {
                   autoFocus={true}
                   name="email"
                   type="email"
+                  dir="ltr"
                   autoComplete="off"
                   aria-invalid={actionData?.errors?.email ? true : undefined}
                   aria-describedby="email-error"
@@ -127,7 +147,7 @@ export default function LoginPage() {
                 />
                 {actionData?.errors?.email && (
                   <div className="pt-1 text-red-700" id="email-error">
-                    {actionData.errors.email}
+                    {t(actionData.errors.email || "")}
                   </div>
                 )}
               </div>
@@ -138,7 +158,7 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="block text-sm font-medium text-white"
               >
-                Password
+                {t("Password")}
               </label>
               <div className="mt-1">
                 <input
@@ -146,6 +166,7 @@ export default function LoginPage() {
                   ref={passwordRef}
                   name="password"
                   type="password"
+                  dir="ltr"
                   autoComplete="current-password"
                   aria-invalid={actionData?.errors?.password ? true : undefined}
                   aria-describedby="password-error"
@@ -153,7 +174,7 @@ export default function LoginPage() {
                 />
                 {actionData?.errors?.password && (
                   <div className="pt-1 text-red-700" id="password-error">
-                    {actionData.errors.password}
+                    {t(actionData.errors.password || "")}
                   </div>
                 )}
               </div>
@@ -164,7 +185,7 @@ export default function LoginPage() {
               type="submit"
               className="w-full rounded bg-red-500 px-4 py-2 text-white transition-colors hover:bg-red-600 focus:bg-red-400"
             >
-              Log in
+              {t("Log in")}
             </button>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -178,11 +199,11 @@ export default function LoginPage() {
                   htmlFor="remember"
                   className="ml-2 block text-sm text-white/60"
                 >
-                  Remember me
+                  {t("Remember me")}
                 </label>
               </div>
               <div className="text-center text-sm text-white/60">
-                Don't have an account?{" "}
+                {t("Don't have an account?")}{" "}
                 <Link
                   className="text-red-500 underline transition-colors hover:text-red-600"
                   to={{
@@ -190,7 +211,7 @@ export default function LoginPage() {
                     search: searchParams.toString(),
                   }}
                 >
-                  Sign up
+                  {t("Sign up")}
                 </Link>
               </div>
             </div>

@@ -118,5 +118,5 @@ export function isMovie(item: Record<string, unknown>): item is MovieItem {
 }
 
 export function getUrl(item: Hit<BaseItem>) {
-  return `/watch/${item.objectID.replace("_", "/")}`;
+  return `/demo/${item.objectID}`;
 }

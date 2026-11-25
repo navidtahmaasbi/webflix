@@ -1,21 +1,20 @@
+import { useI18n } from "~/i18n";
 import { autocomplete } from "@algolia/autocomplete-js";
 import { SearchIcon } from "@heroicons/react/outline";
 import { createElement, Fragment, useEffect, useRef, useState } from "react";
 import { render } from "react-dom";
-
 import { useHotkeys } from "~/hooks/useHotkeys";
 import { cx } from "~/utils";
-
 import type { BaseItem } from "@algolia/autocomplete-core";
 import type {
   AutocompleteApi,
   AutocompleteOptions,
   AutocompleteState,
 } from "@algolia/autocomplete-js";
-
 export function Autocomplete<TItem extends BaseItem>(
   props: Partial<AutocompleteOptions<TItem>>
 ) {
+  const { t, locale, number } = useI18n();
   const containerRef = useRef(null);
   const searchRef = useRef<AutocompleteApi<TItem> | null>(null);
   const [state, setState] = useState<AutocompleteState<TItem>>({
@@ -27,7 +26,6 @@ export function Autocomplete<TItem extends BaseItem>(
     activeItemId: null,
     status: "idle",
   });
-
   useEffect(() => {
     if (!containerRef.current) {
       return undefined;
@@ -62,27 +60,24 @@ export function Autocomplete<TItem extends BaseItem>(
           "flex-1 flex flex-col divide-y divide-gray-500 divide-opacity-20",
       },
       ...props,
+
       onStateChange(params) {
         props.onStateChange?.(params);
         setState(params.state);
       },
     });
-
     return () => {
       searchRef.current?.destroy();
     };
   }, [props]);
-
   useHotkeys(
     "cmd+k, ctrl+k",
     (event) => {
       event.preventDefault();
-
       searchRef.current?.setIsOpen(!state.isOpen);
     },
     [state.isOpen]
   );
-
   return (
     <>
       <SearchButton
@@ -98,31 +93,29 @@ export function Autocomplete<TItem extends BaseItem>(
     </>
   );
 }
-
 type SearchButtonProps = {
   onClick(): void;
   query?: string;
 };
 
 function SearchButton({ onClick, query }: SearchButtonProps) {
+  const { t, locale, number } = useI18n();
   const [isMounted, setIsMounted] = useState(false);
-
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
   return (
     <>
       <button
         onClick={onClick}
         className="rounded-full p-1 text-white/50 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800 md:hidden"
       >
-        <span className="sr-only">Search</span>
+        <span className="sr-only">{t("Search")}</span>
         <SearchIcon className="h-6 w-6" aria-hidden="true" />
       </button>
       {/*
-        If the page takes a while to hydrate (e.g., slow connections) we display
-        an HTML form so the search is still usable without JavaScript.
+       If the page takes a while to hydrate (e.g., slow connections) we display
+       an HTML form so the search is still usable without JavaScript.
       */}
       {isMounted ? (
         <button onClick={onClick} className="group relative hidden md:block">
@@ -147,7 +140,7 @@ function SearchButton({ onClick, query }: SearchButtonProps) {
           />
           <input
             className="h-10 w-full rounded-sm border-0 bg-transparent pr-4 pl-11 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/60 sm:text-sm"
-            placeholder="Search..."
+            placeholder={t("Search...")}
             type="text"
             defaultValue={query}
           />

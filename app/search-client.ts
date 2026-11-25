@@ -1,18 +1,5 @@
-import algoliasearch from "algoliasearch/lite";
+import type algoliasearch from "algoliasearch/lite";
+import { demoSearchClient } from "./demo-search-client";
 
-import { ALGOLIA_APP_ID, ALGOLIA_SEARCH_API_KEY } from "~/constants";
-
-const applicationHost = ALGOLIA_APP_ID.toLowerCase();
-
-export const searchClient = algoliasearch(
-  ALGOLIA_APP_ID,
-  ALGOLIA_SEARCH_API_KEY,
-  {
-    hosts: [
-      `${applicationHost}-2.algolianet.com`,
-      `${applicationHost}-3.algolianet.com`,
-      `${applicationHost}-dsn.algolia.net`,
-      `${applicationHost}-1.algolianet.com`,
-    ],
-  }
-);
+// Keep the existing UI's search protocol while all queries execute locally.
+export const searchClient = demoSearchClient as unknown as ReturnType<typeof algoliasearch>;

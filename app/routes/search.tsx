@@ -1,3 +1,5 @@
+import { persianTitles } from "~/data/persian";
+import { useI18n } from "~/i18n";
 import { Main } from "~/layout/main";
 import {
   Configure,
@@ -12,7 +14,6 @@ import { Link, useLoaderData } from "@remix-run/react";
 import { history } from "instantsearch.js/cjs/lib/routers/index.js";
 import { getSearchServerState } from "~/search-state.server";
 import { HeartIcon, PlusIcon } from "@heroicons/react/outline";
-
 import { ImageWithLoader } from "~/components/image-with-loader";
 import {
   cx,
@@ -29,25 +30,23 @@ import {
   TMDB_IMAGE_BASE_URL,
 } from "~/constants";
 import { Play } from "~/components/icons/play";
-
 import type { BaseHit, Hit, UiState } from "instantsearch.js";
 import type { LoaderFunction } from "@remix-run/server-runtime";
 import type { MovieItem } from "~/types/MovieItem";
 import type { ShowItem } from "~/types/ShowItem";
 import { VirtualSearchBox } from "~/components/virtual-search-box";
-
 export const loader: LoaderFunction = async ({ request }) => {
   const url = new URL(request.url);
   const serverState = await getSearchServerState(<Search url={url} />);
-
-  return { serverState, url };
+  return {
+    serverState,
+    url,
+  };
 };
-
 export default function Page() {
   const { serverState, url } = useLoaderData();
   const user = useOptionalUser();
   const favoriteShows = useOptionalFavoriteShowsWithNewSeasons();
-
   return (
     <Main user={user} favoriteShows={favoriteShows}>
       <main className="relative top-0 flex min-h-screen w-full flex-col bg-cover bg-center pt-40 pb-10">
@@ -60,12 +59,12 @@ export default function Page() {
     </Main>
   );
 }
-
 type SearchProps = {
   url: URL;
 };
 
 function Search({ url }: SearchProps) {
+  const { t, locale, number } = useI18n();
   return (
     <InstantSearch
       searchClient={searchClient}
@@ -81,12 +80,12 @@ function Search({ url }: SearchProps) {
         stateMapping: {
           stateToRoute(uiState) {
             const indexUiState = uiState[ALGOLIA_INDEX_NAME] || {};
-
             return {
               q: indexUiState.query,
               genres: indexUiState.refinementList?.genres,
             } as UiState;
           },
+
           routeToState(routeState) {
             return {
               [ALGOLIA_INDEX_NAME]: {
@@ -102,21 +101,30 @@ function Search({ url }: SearchProps) {
     >
       <Configure hitsPerPage={12} filters={ALGOLIA_FILTERS} />
       <VirtualSearchBox />
-      <div className="mb-5 flex touch-pan-x space-x-3 overflow-x-scroll">
-        <span className="relative -top-px mt-2.5 text-gray-500">Genres</span>
-        <RefinementList
-          attribute="genres"
-          operator="and"
-          classNames={{
-            list: "flex space-x-2",
-            item: "my-1",
-            label:
-              "block rounded-full bg-gray-800 hover:bg-gray-700 transitions-colors px-4 py-1.5 font-medium text-gray-100 cursor-pointer selected:bg-red-600",
-            selectedItem: "selected",
-            count: "hidden",
-            checkbox: "hidden",
-          }}
-        />
+      <div className="genre-filter">
+        <span className="genre-filter__heading">{t("Explore genres")}</span>
+        <div
+          className="genre-filter__scroll"
+          role="region"
+          aria-label={t("Genre filters")}
+          tabIndex={0}
+        >
+          <RefinementList
+            attribute="genres"
+            transformItems={(items) =>
+              items.map((item) => ({ ...item, label: t(item.label) }))
+            }
+            operator="and"
+            classNames={{
+              list: "genre-filter__list",
+              item: "genre-filter__item",
+              label: "genre-filter__chip",
+              selectedItem: "genre-filter__item--selected",
+              count: "genre-filter__count",
+              checkbox: "sr-only",
+            }}
+          />
+        </div>
       </div>
       <InfiniteHitsScroll hitComponent={ShowOrMovieHit} />
     </InstantSearch>
@@ -127,9 +135,13 @@ type HitProps = {
   hit: Hit<MovieItem> | Hit<ShowItem>;
 };
 
-function ShowOrMovieHit({ hit }: HitProps) {
+function ShowOrMovieHit({ hit: originalHit }: HitProps) {
+  const { t, locale, number } = useI18n();
+  const hit =
+    locale === "fa"
+      ? { ...originalHit, ...persianTitles[originalHit.objectID] }
+      : originalHit;
   const url = getUrl(hit);
-
   return (
     <>
       <Link to={url}>
@@ -161,7 +173,7 @@ function ShowOrMovieHit({ hit }: HitProps) {
           </li>
           <li>
             <button
-              title="Add to my list"
+              title={t("Add to my list")}
               className="group flex-none rounded-full border-2 border-white/40 bg-gray-700 p-1.5 transition-colors hover:border-white/100"
             >
               <PlusIcon className="h-3 w-3 fill-white/0 stroke-white transition-colors group-hover:fill-white/100" />
@@ -169,7 +181,7 @@ function ShowOrMovieHit({ hit }: HitProps) {
           </li>
           <li>
             <button
-              title="I liked this"
+              title={t("I liked this")}
               className="group flex-none rounded-full border-2 border-white/40 bg-gray-700 p-1.5 transition-colors hover:border-white/100"
             >
               <HeartIcon className="h-3 w-3 fill-white/0 stroke-white transition-colors group-hover:fill-white/100" />
@@ -178,7 +190,11 @@ function ShowOrMovieHit({ hit }: HitProps) {
         </ul>
         <h2 className="mb-1 truncate text-sm font-semibold">{hit.title}</h2>
         <p className="mb-1 text-xs text-gray-400">
-          {isShow(hit)
+          {locale === "fa"
+            ? isShow(hit)
+              ? `${number(hit.seasons.length)} فصل`
+              : `${number(hit.runtime)} دقیقه`
+            : isShow(hit)
             ? `${hit.seasons.length} season${hit.seasons.length > 1 ? "s" : ""}`
             : minutesToHours(hit.runtime)}
         </p>
@@ -206,15 +222,14 @@ type InfiniteHitsScrollProps<THit extends BaseHit = BaseHit> = {
 function InfiniteHitsScroll<THit extends BaseHit = BaseHit>({
   hitComponent: HitComponent,
 }: InfiniteHitsScrollProps<THit>) {
+  const { t, locale, number } = useI18n();
   const { hits, showMore, isLastPage } = useInfiniteHits();
   const { ref: sentinelRef, inView } = useInView();
-
   useEffect(() => {
     if (inView && !isLastPage) {
       showMore();
     }
   }, [inView, showMore, isLastPage]);
-
   return (
     <>
       <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4 md:grid-cols-6">
@@ -229,7 +244,7 @@ function InfiniteHitsScroll<THit extends BaseHit = BaseHit>({
       </ul>
       {!isLastPage && (
         <div ref={sentinelRef} className="p-4 text-center text-gray-600">
-          Loading more hits...
+          {t("Loading more hits...")}
         </div>
       )}
     </>

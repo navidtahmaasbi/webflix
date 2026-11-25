@@ -4,6 +4,9 @@ import type {
   MetaFunction,
 } from "@remix-run/node";
 import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
+import { LanguageProvider, useI18n } from "~/i18n";
+import type { Locale } from "~/i18n";
 import {
   Links,
   LiveReload,
@@ -42,6 +45,11 @@ type LoaderData = {
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
+  const locale: Locale = /(?:^|;\s*)webflix-locale=fa(?:;|$)/.test(
+    request.headers.get("Cookie") || ""
+  )
+    ? "fa"
+    : "en";
   const today = new Date();
 
   const user = await getUser(request);
@@ -64,15 +72,29 @@ export const loader: LoaderFunction = async ({ request }) => {
       });
     });
 
-    return json<LoaderData>({ user, favoriteShowsWithNewSeasons });
+    return json({ user, favoriteShowsWithNewSeasons, locale });
   }
 
-  return json<LoaderData>({ user });
+  return json({ user, locale });
 };
 
 export default function App() {
+  const { locale } = useLoaderData<{ locale: Locale }>();
   return (
-    <html lang="en" className="h-full">
+    <LanguageProvider initialLocale={locale}>
+      <Document />
+    </LanguageProvider>
+  );
+}
+
+function Document() {
+  const { locale } = useI18n();
+  return (
+    <html
+      lang={locale}
+      dir={locale === "fa" ? "rtl" : "ltr"}
+      className="h-full"
+    >
       <head>
         <Meta />
         <Links />

@@ -1,3 +1,5 @@
+import { LanguageSwitch } from "~/i18n";
+import { useI18n } from "~/i18n";
 import React, { Fragment } from "react";
 import type { AutocompleteComponents } from "@algolia/autocomplete-js";
 import { getAlgoliaFacets, getAlgoliaResults } from "@algolia/autocomplete-js";
@@ -9,14 +11,13 @@ import {
   BellIcon,
   XIcon,
 } from "@heroicons/react/outline";
-import { Link } from "@remix-run/react";
+import { Link, useLocation } from "@remix-run/react";
 import gravatar from "gravatar";
 import type { Hit } from "instantsearch.js";
 import { useNavigate } from "react-router";
 import { useSearchParams } from "@remix-run/react";
 import { isAfter } from "date-fns";
 import * as timeago from "timeago.js";
-
 import { cx, getUrl, isMovie, isShow } from "~/utils";
 import { WebflixLogo } from "~/components/logos/webflix";
 import type { ReturnedGetUser } from "~/session.server";
@@ -43,28 +44,51 @@ import type {
   Show,
   Video,
 } from "@prisma/client";
-
 type MainProps = {
   children?: React.ReactNode;
   user?: ReturnedGetUser;
   favoriteShows?: ReturnedGetFavoriteShows;
 };
-
 const navigation = [
-  { name: "Discover", href: "/", current: true },
-  { name: "Browse", href: "/", current: false },
-  { name: "Watchlist", href: "/", current: false },
+  {
+    name: "Discover",
+    href: "/",
+    current: true,
+  },
+  {
+    name: "Browse",
+    href: "/search",
+    current: false,
+  },
+  {
+    name: "Movies",
+    href: "/movies",
+    current: false,
+  },
+  {
+    name: "TV Shows",
+    href: "/shows",
+    current: false,
+  },
+  {
+    name: "My List",
+    href: "/my-list",
+    current: false,
+  },
 ];
-
 export function Main({ children, user, favoriteShows }: MainProps) {
+  const { t, locale, number } = useI18n();
+  const { pathname } = useLocation();
+  const links = navigation.map((item) => ({
+    ...item,
+    current: pathname === item.href,
+  }));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-
   const initialQuery = searchParams?.get("q") || "";
-
   return (
     <div className="relative min-h-full bg-gray-900">
-      <header className="fixed top-0 z-30 w-full">
+      <header dir="ltr" className="fixed top-0 z-30 w-full">
         <div>
           <Disclosure
             as="nav"
@@ -77,7 +101,7 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                     <div className="absolute inset-y-0 left-0 flex items-center sm:hidden">
                       {/* Mobile menu button*/}
                       <Disclosure.Button className="inline-flex items-center justify-center rounded-md p-2 text-white/50 hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
-                        <span className="sr-only">Open main menu</span>
+                        <span className="sr-only">{t("Open main menu")}</span>
                         {open ? (
                           <XIcon className="block h-6 w-6" aria-hidden="true" />
                         ) : (
@@ -90,17 +114,21 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                     </div>
                     <div className="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
                       <Link
-                        to={{ pathname: "/" }}
+                        to={{
+                          pathname: "/",
+                        }}
                         className="flex flex-shrink-0 items-center"
                       >
-                        <WebflixLogo className="h-6 text-red-600" />
+                        <WebflixLogo className="webflix-brand h-6" />
                       </Link>
                       <div className="hidden sm:ml-6 sm:block">
                         <div className="flex space-x-4">
-                          {navigation.map((item) => (
+                          {links.map((item) => (
                             <Link
-                              key={item.name}
-                              to={{ pathname: item.href }}
+                              key={t(item.name)}
+                              to={{
+                                pathname: item.href,
+                              }}
                               className={cx(
                                 item.current
                                   ? "font-medium text-white"
@@ -116,27 +144,40 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                       </div>
                     </div>
                     <div className="flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
+                      <LanguageSwitch />
                       <Autocomplete
                         openOnFocus={true}
                         detachedMediaQuery=""
                         defaultActiveItemId={0}
-                        placeholder="Search for movies, shows, actors, etc."
-                        initialState={{ query: initialQuery }}
+                        placeholder={t(
+                          "Search for movies, shows, actors, etc."
+                        )}
+                        initialState={{
+                          query: initialQuery,
+                        }}
+                        onSubmit={({ state }) => {
+                          navigate(
+                            `/search?q=${encodeURIComponent(state.query)}`
+                          );
+                        }}
                         getSources={({ query }) => {
                           if (query.length === 0 && favoriteShows) {
                             return [
                               {
                                 sourceId: "new_sesons",
+
                                 getItems() {
                                   return favoriteShows.map((show) =>
                                     showToAlgoliaRecord(show as any)
                                   );
                                 },
+
                                 onSelect({ item }) {
                                   if (item.objectID) {
                                     navigate(getUrl(item as Hit<ShowItem>));
                                   }
                                 },
+
                                 templates: {
                                   header() {
                                     return (
@@ -148,6 +189,7 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                                       </>
                                     );
                                   },
+
                                   item({ item, components }) {
                                     return (
                                       <ShowWithNewSeasonItem
@@ -168,6 +210,7 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                           return [
                             {
                               sourceId: "movies_and_shows",
+
                               getItems() {
                                 return getAlgoliaResults({
                                   searchClient,
@@ -185,6 +228,7 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                                   ],
                                 });
                               },
+
                               onSelect({ item }) {
                                 if (item.objectID) {
                                   navigate(
@@ -192,6 +236,7 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                                   );
                                 }
                               },
+
                               templates: {
                                 header() {
                                   return (
@@ -203,6 +248,7 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                                     </>
                                   );
                                 },
+
                                 item({ item, components }) {
                                   return (
                                     <MovieOrShowItem
@@ -215,6 +261,7 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                             },
                             {
                               sourceId: "all_results",
+
                               getItems() {
                                 return [
                                   {
@@ -222,9 +269,11 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                                   },
                                 ];
                               },
+
                               onSelect() {
                                 navigate(`/search/?q=${query}`);
                               },
+
                               templates: {
                                 item({ item }) {
                                   return (
@@ -234,7 +283,13 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                                         href={`/search/?q=${query}`}
                                       >
                                         <div>
-                                          {(item as { text: string }).text}
+                                          {
+                                            (
+                                              item as {
+                                                text: string;
+                                              }
+                                            ).text
+                                          }
                                         </div>
                                         <CornerDownLeft className="h-6 w-5 flex-none text-gray-400 transition-opacity aria-selected:opacity-100 aria-unselected:opacity-0" />
                                       </a>
@@ -245,6 +300,7 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                             },
                             {
                               sourceId: "actors",
+
                               getItems() {
                                 return getAlgoliaFacets({
                                   searchClient,
@@ -258,6 +314,7 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                                       },
                                     },
                                   ],
+
                                   transformResponse({ facetHits }) {
                                     return facetHits[0].filter(
                                       (hit) => hit.label.split("||")[1]
@@ -265,10 +322,12 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                                   },
                                 });
                               },
+
                               templates: {
                                 header() {
                                   return <SourceHeading>Actors</SourceHeading>;
                                 },
+
                                 item({ item }) {
                                   return (
                                     <ActorOrDirectorItem
@@ -292,10 +351,8 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                               curr.items as Array<Hit<MovieItem | ShowItem>>
                             );
                           }, []);
-
                           const current =
                             activeItemId !== null && items[activeItemId];
-
                           render(
                             items.length > 0 ? (
                               <>
@@ -414,10 +471,12 @@ export function Main({ children, user, favoriteShows }: MainProps) {
                         </Menu>
                       ) : (
                         <Link
-                          to={{ pathname: "/login" }}
+                          to={{
+                            pathname: "/login",
+                          }}
                           className="ml-3 whitespace-nowrap rounded bg-red-500 px-4 py-2 text-white transition-colors hover:bg-red-600 focus:bg-red-400"
                         >
-                          Sign in
+                          {t("Sign in")}
                         </Link>
                       )}
                     </div>
@@ -426,7 +485,7 @@ export function Main({ children, user, favoriteShows }: MainProps) {
 
                 <Disclosure.Panel className="sm:hidden">
                   <div className="space-y-1 px-2 pt-2 pb-3">
-                    {navigation.map((item) => (
+                    {links.map((item) => (
                       <Disclosure.Button
                         key={item.name}
                         as="a"
@@ -453,7 +512,6 @@ export function Main({ children, user, favoriteShows }: MainProps) {
     </div>
   );
 }
-
 type MovieOrShowItemProps = {
   item: Hit<ShowItem | MovieItem>;
   components: AutocompleteComponents;
@@ -462,7 +520,6 @@ type MovieOrShowItemProps = {
 function MovieOrShowItem({ item, components }: MovieOrShowItemProps) {
   const url = getUrl(item);
   const timestamp = isMovie(item) ? item.release_date : item.first_air_date;
-
   return (
     <div className="cursor-default select-none rounded-md p-3 text-sm text-gray-400 aria-selected:bg-gray-800/80 aria-selected:text-white">
       <a className="flex items-center justify-between space-x-4" href={url}>
@@ -516,7 +573,6 @@ function ShowWithNewSeasonItem({
   const url = getUrl(item);
   const newSeason = item.seasons[item.seasons.length - 1];
   const today = new Date();
-
   return (
     <div className="cursor-default select-none rounded-md p-3 text-sm text-gray-400 aria-selected:bg-gray-800/80 aria-selected:text-white">
       <a className="flex items-center justify-between space-x-4" href={url}>
@@ -586,7 +642,6 @@ type ActorItemProps = {
 
 function ActorOrDirectorItem({ item }: ActorItemProps) {
   const [name, image] = item.label.split("||");
-
   return (
     <div className="flex cursor-default select-none items-center justify-between space-x-4 rounded-md p-3 text-sm aria-selected:bg-gray-800/80 aria-selected:text-white">
       <div className="flex items-center space-x-4">
@@ -626,7 +681,6 @@ function MovieOrShowPreview({
   type,
 }: MovieOrShowPreviewProps) {
   const timestamp = isMovie(item) ? item.release_date : item.first_air_date;
-
   return (
     <div className="hidden h-[36rem] w-1/2 flex-none flex-col overflow-y-auto md:flex">
       <div className="flex h-full flex-none flex-col justify-between p-4">
@@ -733,15 +787,22 @@ function SourceHeading({ children }: HeadingProps) {
 function showToAlgoliaRecord(
   show: Show & {
     genres: Genre[];
-    cast: Array<Credit & { person: Person }>;
+    cast: Array<
+      Credit & {
+        person: Person;
+      }
+    >;
     videos: Video[];
-    seasons: Array<Season & { episodes: Episode[] }>;
+    seasons: Array<
+      Season & {
+        episodes: Episode[];
+      }
+    >;
   }
 ): Hit<ShowItem> {
   const { airDate: firstAirDate } = show.seasons[0].episodes[0] || {
     airDate: null,
   };
-
   return {
     objectID: `show_${show.tmdbId}`,
     record_type: "show",
@@ -760,8 +821,9 @@ function showToAlgoliaRecord(
     in_production: show.inProduction,
     first_air_date: new Date(firstAirDate).getTime(),
     seasons: show.seasons.map((season, index) => {
-      const { airDate } = season.episodes[0] || { airDate: null };
-
+      const { airDate } = season.episodes[0] || {
+        airDate: null,
+      };
       return {
         air_date: airDate ? new Date(airDate).getTime() : null,
         episode_count: season.episodes.length,
